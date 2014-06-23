@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"io/ioutil"
 )
 
 func main() {
@@ -14,12 +15,11 @@ func main() {
 	ProcessArgs(&input, &output)
 	input, output = ValidatePaths(&input, &output)
 
-	/*data := make([]byte, 100)
-	count, err := file.Read(data)
+	b, err := ioutil.ReadFile(input)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("read %d bytes: %q\n", count, data[:count])*/
+	println(string(b))
 }
 
 func ProcessArgs(input, output *string) {
@@ -43,7 +43,11 @@ func ValidatePaths(input, output *string) (string, string) {
 		log.Fatal(err)
 	}
 	//check if the file exists
-	_, err = os.Open(newInput)
+	file, err := os.Open(newInput)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = file.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,6 +63,7 @@ func ValidatePaths(input, output *string) (string, string) {
 	}
 	return newInput, newOutput
 }
+
 func ConvertOfflineToOnline(input, output string) {
 
 }
