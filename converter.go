@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/nuclearcookie/substringfinder"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,11 +16,13 @@ func main() {
 	ProcessArgs(&input, &output)
 	input, output = ValidatePaths(&input, &output)
 
-	b, err := ioutil.ReadFile(input)
+	buffer, err := ioutil.ReadFile(input)
 	if err != nil {
 		log.Fatal(err)
 	}
-	println(string(b))
+	outputBuffer := ConvertOfflineToOnline(&buffer)
+	//permission 0644 
+	ioutil.WriteFile(output, outputBuffer, 0644)
 }
 
 func ProcessArgs(input, output *string) {
@@ -64,6 +67,27 @@ func ValidatePaths(input, output *string) (string, string) {
 	return newInput, newOutput
 }
 
-func ConvertOfflineToOnline(input, output string) {
+func ConvertOfflineToOnline(buffer *[]byte) []byte {
+	fileData := string(*buffer)
+	RemoveImport(&fileData)
+	return *buffer
+}
 
+func RemoveImport(data *string) {
+	start, end := GetImportBlock(data)
+	//end + 1 to include the last found rune
+	imports := (*data)[start : end+1]
+	println(imports)
+}
+
+func GetImportBlock(data *string) (int, int) {
+	start, end := substringfinder.FindFirstOfSubString(*data, "import")
+	if start != -1 && end != -1 {
+		_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '(', ')', end)
+	}
+	if start == -1 || end == -1 {
+		println("Something went wrong while finding the import block. Terminating..")
+		os.Exit(0)
+	}
+	return start, end
 }
