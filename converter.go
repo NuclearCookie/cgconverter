@@ -1,30 +1,25 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"log"
 )
 
 func main() {
 	var input string
 	var output string
-	//process command line arguments
 	ProcessArgs(&input, &output)
 	input, output = ValidatePaths(&input, &output)
-	
-	
+
 	/*data := make([]byte, 100)
 	count, err := file.Read(data)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("read %d bytes: %q\n", count, data[:count])*/
-	
-	fmt.Printf("input file: %s\n", input)
-	fmt.Printf("output file: %s\n", output)
 }
 
 func ProcessArgs(input, output *string) {
@@ -57,7 +52,7 @@ func ValidatePaths(input, output *string) (string, string) {
 		newOutput = filepath.Join(filepath.Dir(newInput), "OnlineCGCode.txt")
 		fmt.Printf("Generating output file at %s\n", newOutput)
 	} else {
-		newOutput, err =filepath.EvalSymlinks(*output)
+		newOutput, err = filepath.EvalSymlinks(*output)
 		if err != nil {
 			log.Fatal(err)
 		}
