@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"io/ioutil"
 )
 
 func main() {
