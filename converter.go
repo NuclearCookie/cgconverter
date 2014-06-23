@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -83,7 +84,12 @@ func RemoveImport(data *string) {
 func GetImportBlock(data *string) (int, int) {
 	start, end := substringfinder.FindFirstOfSubString(*data, "import")
 	if start != -1 && end != -1 {
-		_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '(', ')', end)
+		if strings.IndexRune((*data)[start:len(*data)], '(') < strings.IndexRune((*data)[start:len(*data)], '"') {
+			//import structure surrounded by brackets
+			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '(', ')', end)
+		} else {
+			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '"', '"', end)
+		}
 	}
 	if start == -1 || end == -1 {
 		println("Something went wrong while finding the import block. Terminating..")
