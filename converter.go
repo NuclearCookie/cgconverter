@@ -209,6 +209,18 @@ func ReplaceOutputCalls(data string) string {
 }
 
 func ReplaceInputCalls(data string, inputChannelName string) string {
+	originalString := "fmt.Sscanln(<-"
+	originalString += inputChannelName
+	originalString += ","
+	data = strings.Replace(data, originalString, "fmt.Scanln(", -1)
+	start, end := substringfinder.FindFirstOfSubString(data, inputChannelName)
+	for start != -1 && end != -1 {
+		if substringfinder.IsWholeWord(data, start, end) {
 
+		} else {
+
+		}
+		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1)
+	}
 	return data
 }
