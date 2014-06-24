@@ -70,10 +70,14 @@ func ValidatePaths(input, output *string) (string, string) {
 
 func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
-	RemoveImport(fileData)
+	fileData = RemoveImport(fileData)
+	fileData = RemoveCGReaderMainFunction(fileData)
 	return *buffer
 }
 
+//******************************************
+// IMPORT BLOCK
+//******************************************
 func RemoveImport(data string) string {
 	start, end := GetImportBlock(data)
 	//end + 1 to include the last found rune
@@ -88,7 +92,6 @@ func RemoveImport(data string) string {
 		imports = imports[0:start] + imports[end+1:len(imports)]
 	}
 	data = strings.Replace(data, originalImportsBlock, imports, 1)
-	println(data)
 	return data
 
 }
@@ -108,4 +111,32 @@ func GetImportBlock(data string) (int, int) {
 		os.Exit(0)
 	}
 	return start, end
+}
+
+//******************************************
+// MAIN FUNCTION REMOVAL BLOCK
+//******************************************
+func RemoveCGReaderMainFunction(data string) string {
+	start, end := GetCGReaderMainFunction(data)
+}
+
+func GetCGReaderMainFunction(data string) (int, int) {
+	var start, end int
+	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
+	if(start != -1) {
+		break;
+	}
+	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms")
+	if(start != -1) {
+		break;
+	}
+	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
+	if(start != -1) {
+		break;
+	}
+	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
+	if(start != -1) {
+		break;
+	}
+	//TO DO: Add RunTargetProgram 
 }
