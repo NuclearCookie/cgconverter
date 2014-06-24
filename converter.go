@@ -70,11 +70,22 @@ func ValidatePaths(input, output *string) (string, string) {
 
 func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
+	inputChannelName := GetInputChannelName(fileData)
 	fileData = RemoveImport(fileData)
 	fileData = RemoveCGReaderMainFunction(fileData)
-	fileData = ReplaceTraceCalls(fileData)
-	println(fileData)
+	fileData = ImportMissingPackages(fileData)
+	fileData = ReplaceOutputCalls(fileData)
+	fileData = ReplaceInputCalls(fileData, inputChannelName)
+	//println(fileData)
 	return *buffer
+}
+
+//******************************************
+// GETTERS
+//******************************************
+func GetInputChannelName(data string) string {
+	start, _ := substringfinder.FindFirstOfSubString(data, "<-chan string")
+	return substringfinder.GetLastWord(data[:start])
 }
 
 //******************************************
@@ -159,10 +170,11 @@ func GetCGReaderMainFunction(data string) (int, int) {
 //******************************************
 // DEBUG OUTPUT REPLACE BLOCK
 //******************************************
-func ReplaceTraceCalls(data string) string {
+func ImportMissingPackages(data string) string {
 	//add log to the imports block if it's not there already
 	start, end := GetImportBlock(data)
 	importsBlock := data[start : end+1]
+	//LOG PACKAGE
 	start, end = substringfinder.FindFirstOfSubString(importsBlock, "\"log\"")
 	//log block not found
 	if start == -1 && end == -1 {
@@ -173,8 +185,30 @@ func ReplaceTraceCalls(data string) string {
 		importsBlock = importsBlock[:end] + "\"log\"\n" + importsBlock[end:]
 		data = strings.Replace(data, originalImportsBlock, importsBlock, 1)
 	}
+	//FMT PACKAGE
+	start, end = substringfinder.FindFirstOfSubString(importsBlock, "\"fmt\"")
+	//fmt block not found
+	if start == -1 && end == -1 {
+		originalImportsBlock := importsBlock
+		originalImportsBlock += " "
+		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
+		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
+		importsBlock = importsBlock[:end] + "\"fmt\"\n" + importsBlock[end:]
+		data = strings.Replace(data, originalImportsBlock, importsBlock, 1)
+	}
+	return data
+}
+func ReplaceOutputCalls(data string) string {
 	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
 	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
 	data = strings.Replace(data, "cgreader.Trace", "log.Print", -1)
+	data = strings.Replace(data, "cgreader.Printf", "fmt.Printf", -1)
+	data = strings.Replace(data, "cgreader.Println", "println", -1)
+	data = strings.Replace(data, "cgreader.Print", "fmt.Print", -1)
+	return data
+}
+
+func ReplaceInputCalls(data string, inputChannelName string) string {
+
 	return data
 }
