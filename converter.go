@@ -70,25 +70,37 @@ func ValidatePaths(input, output *string) (string, string) {
 
 func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
-	RemoveImport(&fileData)
+	RemoveImport(fileData)
 	return *buffer
 }
 
-func RemoveImport(data *string) {
+func RemoveImport(data string) string {
 	start, end := GetImportBlock(data)
 	//end + 1 to include the last found rune
-	imports := (*data)[start : end+1]
-	println(imports)
+	//note: reslicing does not copy over the data!
+	imports := data[start : end+1]
+	originalImportsBlock := imports
+	originalImportsBlock += " "
+	originalImportsBlock = originalImportsBlock[0 : len(originalImportsBlock)-1]
+	//remove the cgreader import
+	start, end = substringfinder.FindIndicesBetweenRunesContaining(imports, '"', '"', "cgreader")
+	if start != -1 && end != -1 {
+		imports = imports[0:start] + imports[end+1:len(imports)]
+	}
+	data = strings.Replace(data, originalImportsBlock, imports, 1)
+	println(data)
+	return data
+
 }
 
-func GetImportBlock(data *string) (int, int) {
-	start, end := substringfinder.FindFirstOfSubString(*data, "import")
+func GetImportBlock(data string) (int, int) {
+	start, end := substringfinder.FindFirstOfSubString(data, "import")
 	if start != -1 && end != -1 {
-		if strings.IndexRune((*data)[start:len(*data)], '(') < strings.IndexRune((*data)[start:len(*data)], '"') {
+		if strings.IndexRune(data[start:len(data)], '(') < strings.IndexRune(data[start:len(data)], '"') {
 			//import structure surrounded by brackets
-			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '(', ')', end)
+			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(data, '(', ')', end)
 		} else {
-			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(*data, '"', '"', end)
+			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(data, '"', '"', end)
 		}
 	}
 	if start == -1 || end == -1 {
