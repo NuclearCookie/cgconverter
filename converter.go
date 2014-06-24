@@ -72,6 +72,7 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
 	fileData = RemoveImport(fileData)
 	fileData = RemoveCGReaderMainFunction(fileData)
+	fileData = ReplaceTraceCalls(fileData)
 	println(fileData)
 	return *buffer
 }
@@ -153,4 +154,27 @@ func GetCGReaderMainFunction(data string) (int, int) {
 	//Isolate the function
 	_, end = substringfinder.FindIndicesBetweenMatchingRunesWithStartingIndex(data, '(', ')', end+1, true)
 	return start, end
+}
+
+//******************************************
+// DEBUG OUTPUT REPLACE BLOCK
+//******************************************
+func ReplaceTraceCalls(data string) string {
+	//add log to the imports block if it's not there already
+	start, end := GetImportBlock(data)
+	importsBlock := data[start : end+1]
+	start, end = substringfinder.FindFirstOfSubString(importsBlock, "\"log\"")
+	//log block not found
+	if start == -1 && end == -1 {
+		originalImportsBlock := importsBlock
+		originalImportsBlock += " "
+		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
+		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
+		importsBlock = importsBlock[:end] + "\"log\"\n" + importsBlock[end:]
+		data = strings.Replace(data, originalImportsBlock, importsBlock, 1)
+	}
+	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
+	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
+	data = strings.Replace(data, "cgreader.Trace", "log.Print", -1)
+	return data
 }
