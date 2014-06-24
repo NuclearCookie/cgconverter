@@ -117,26 +117,28 @@ func GetImportBlock(data string) (int, int) {
 // MAIN FUNCTION REMOVAL BLOCK
 //******************************************
 func RemoveCGReaderMainFunction(data string) string {
-	start, end := GetCGReaderMainFunction(data)
+	_, _ = GetCGReaderMainFunction(data)
+	return data
 }
 
 func GetCGReaderMainFunction(data string) (int, int) {
 	var start, end int
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
 	if start != -1 {
-		break
+		return start, end
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms")
 	if start != -1 {
-		break
+		return start, end
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
 	if start != -1 {
-		break
+		return start, end
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
 	if start != -1 {
-		break
+		return start, end
 	}
+	return -1, -1
 	//TO DO: Add RunTargetProgram 
 }
