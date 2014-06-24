@@ -123,20 +123,20 @@ func RemoveCGReaderMainFunction(data string) string {
 func GetCGReaderMainFunction(data string) (int, int) {
 	var start, end int
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
-	if(start != -1) {
-		break;
+	if start != -1 {
+		break
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms")
-	if(start != -1) {
-		break;
+	if start != -1 {
+		break
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
-	if(start != -1) {
-		break;
+	if start != -1 {
+		break
 	}
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
-	if(start != -1) {
-		break;
+	if start != -1 {
+		break
 	}
 	//TO DO: Add RunTargetProgram 
 }
