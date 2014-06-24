@@ -72,6 +72,7 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
 	fileData = RemoveImport(fileData)
 	fileData = RemoveCGReaderMainFunction(fileData)
+	println(fileData)
 	return *buffer
 }
 
@@ -83,13 +84,14 @@ func RemoveImport(data string) string {
 	//end + 1 to include the last found rune
 	//note: reslicing does not copy over the data!
 	imports := data[start : end+1]
+	//make a copy by adding 1 char and taking a slice of all -1	
 	originalImportsBlock := imports
 	originalImportsBlock += " "
-	originalImportsBlock = originalImportsBlock[0 : len(originalImportsBlock)-1]
+	originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
 	//remove the cgreader import
 	start, end = substringfinder.FindIndicesBetweenRunesContaining(imports, '"', '"', "cgreader")
 	if start != -1 && end != -1 {
-		imports = imports[0:start] + imports[end+1:len(imports)]
+		imports = imports[0:start] + imports[end+1:]
 	}
 	data = strings.Replace(data, originalImportsBlock, imports, 1)
 	return data
@@ -99,7 +101,7 @@ func RemoveImport(data string) string {
 func GetImportBlock(data string) (int, int) {
 	start, end := substringfinder.FindFirstOfSubString(data, "import")
 	if start != -1 && end != -1 {
-		if strings.IndexRune(data[start:len(data)], '(') < strings.IndexRune(data[start:len(data)], '"') {
+		if strings.IndexRune(data[start:], '(') < strings.IndexRune(data[start:], '"') {
 			//import structure surrounded by brackets
 			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(data, '(', ')', end)
 		} else {
@@ -117,28 +119,38 @@ func GetImportBlock(data string) (int, int) {
 // MAIN FUNCTION REMOVAL BLOCK
 //******************************************
 func RemoveCGReaderMainFunction(data string) string {
-	_, _ = GetCGReaderMainFunction(data)
+	start, end := GetCGReaderMainFunction(data)
+	if start != -1 && end != -1 {
+		mainString := data[start : end+1]
+		originalMainString := mainString
+		originalMainString += " "
+		originalMainString = originalMainString[:len(originalMainString)-1]
+		start, end = substringfinder.FindIndicesBetweenMatchingRunes(mainString, '{', '}', true)
+		if start != -1 && end != -1 {
+			mainString = mainString[start+1 : end]
+			data = strings.Replace(data, originalMainString, mainString, 1)
+		}
+	}
 	return data
 }
 
 func GetCGReaderMainFunction(data string) (int, int) {
-	var start, end int
-	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
-	if start != -1 {
-		return start, end
-	}
+	start, end := -1, -1
 	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms")
-	if start != -1 {
-		return start, end
+	if start == -1 {
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
 	}
-	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
-	if start != -1 {
-		return start, end
+	if start == -1 {
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
 	}
-	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
-	if start != -1 {
-		return start, end
+	if start == -1 {
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
 	}
-	return -1, -1
-	//TO DO: Add RunTargetProgram 
+	if start == -1 {
+		println("Unknown cgreader main function.. cannot remove it!")
+		os.Exit(0)
+	}
+	//Isolate the function
+	_, end = substringfinder.FindIndicesBetweenMatchingRunesWithStartingIndex(data, '(', ')', end+1, true)
+	return start, end
 }
