@@ -84,7 +84,7 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 // GETTERS
 //******************************************
 func GetInputChannelName(data string) string {
-	start, _ := substringfinder.FindFirstOfSubString(data, "<-chan string")
+	start, _ := substringfinder.FindFirstOfSubString(data, "<-chan string", true)
 	return substringfinder.GetLastWord(data[:start])
 }
 
@@ -111,7 +111,7 @@ func RemoveImport(data string) string {
 }
 
 func GetImportBlock(data string) (int, int) {
-	start, end := substringfinder.FindFirstOfSubString(data, "import")
+	start, end := substringfinder.FindFirstOfSubString(data, "import", true)
 	if start != -1 && end != -1 {
 		if strings.IndexRune(data[start:], '(') < strings.IndexRune(data[start:], '"') {
 			//import structure surrounded by brackets
@@ -148,15 +148,15 @@ func RemoveCGReaderMainFunction(data string) string {
 
 func GetCGReaderMainFunction(data string) (int, int) {
 	start, end := -1, -1
-	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms")
+	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms", true)
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram")
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram", true)
 	}
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms")
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms", true)
 	}
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram")
+		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram", true)
 	}
 	if start == -1 {
 		println("Unknown cgreader main function.. cannot remove it!")
@@ -181,7 +181,7 @@ func AddPackage(fileContent, packageName string) string {
 	importsBlock := fileContent[start : end+1]
 
 	packageName = "\"" + packageName + "\""
-	start, end = substringfinder.FindFirstOfSubString(importsBlock, packageName)
+	start, end = substringfinder.FindFirstOfSubString(importsBlock, packageName, false)
 	//block not found: add it here
 	if start == -1 && end == -1 {
 		//copy a string..
@@ -214,13 +214,14 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 	originalString += inputChannelName
 	originalString += ","
 	data = strings.Replace(data, originalString, "fmt.Scanln(", -1)
-	start, end := substringfinder.FindFirstOfSubString(data, inputChannelName)
+	start, end := substringfinder.FindFirstOfSubString(data, inputChannelName, true)
 	for start != -1 && end != -1 {
 		if substringfinder.IsWholeWord(data, start, end) {
 			//<-inputchannelname == read a whole line from input
+
 		} else {
 		}
-		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1)
+		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
 	}
 	return data
 }
