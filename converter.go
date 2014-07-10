@@ -172,7 +172,7 @@ func ImportMissingPackages(data string) string {
 	data = AddPackage(data, "log")
 	data = AddPackage(data, "fmt")
 	data = AddPackage(data, "bufio")
-	data = AddPackage(data, "io")
+	data = AddPackage(data, "os")
 	return data
 }
 
@@ -203,8 +203,8 @@ func ReplaceOutputCalls(data string) string {
 	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
 	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
 	data = strings.Replace(data, "cgreader.Trace", "log.Print", -1)
-	data = strings.Replace(data, "cgreader.Printf", "fmt.Printf", -1)
 	data = strings.Replace(data, "cgreader.Println", "println", -1)
+	data = strings.Replace(data, "cgreader.Printf", "fmt.Printf", -1)
 	data = strings.Replace(data, "cgreader.Print", "fmt.Print", -1)
 	return data
 }
@@ -218,7 +218,26 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 	for start != -1 && end != -1 {
 		if substringfinder.IsWholeWord(data, start, end) {
 			//<-inputchannelname == read a whole line from input
-
+			if start > 2 {
+				//go fmt makes sure there are no spaces between <- and input
+				if data[start-2:start] == "<-" {
+					//take everything left of this operation and save it...
+					newLineIndex := strings.LastIndex(data[:start-2], "\n") + 1
+					variableName := data[newLineIndex : start-2]
+					//check if we need to add a scanner in this scope
+					left, right := substringfinder.FindIndicesOfSurroundingRunesOfSubString(data, newLineIndex, end+1, '{', '}')
+					newScannerString := "scanner := bufio.NewScanner(os.Stdin)"
+					left, right = substringfinder.FindFirstOfSubString(data[left+1:right], newScannerString, true)
+					if left == -1 && right == -1 {
+						newScannerString += "\n"
+					} else {
+						fmt.Printf("Left and right are: %d and %d", left, right)
+						newScannerString = ""
+					}
+					//remove the old line
+					data = data[:newLineIndex] + newScannerString + "scanner.Scan()\n" + variableName + "scanner.Text()" + data[end+1:]
+				}
+			}
 		} else {
 		}
 		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
