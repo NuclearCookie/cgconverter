@@ -24,6 +24,7 @@ func main() {
 	outputBuffer := ConvertOfflineToOnline(&buffer)
 	//permission 0644 
 	ioutil.WriteFile(output, outputBuffer, 0644)
+	println("Output file generated! Copied online code to clipboard!")
 }
 
 func ProcessArgs(input, output *string) {
@@ -71,12 +72,13 @@ func ValidatePaths(input, output *string) (string, string) {
 func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData := string(*buffer)
 	inputChannelName := GetInputChannelName(fileData)
+	outputChannelName := GetOutputChannelName(fileData)
 	fileData = RemoveImport(fileData)
 	fileData = RemoveCGReaderMainFunction(fileData)
 	fileData = ImportMissingPackages(fileData)
-	fileData = ReplaceOutputCalls(fileData)
+	fileData = ReplaceOutputCalls(fileData, outputChannelName)
 	fileData = ReplaceInputCalls(fileData, inputChannelName)
-	println(fileData)
+	//println(fileData)
 	return *buffer
 }
 
@@ -85,6 +87,12 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 //******************************************
 func GetInputChannelName(data string) string {
 	start, _ := substringfinder.FindFirstOfSubString(data, "<-chan string", true)
+	return substringfinder.GetLastWord(data[:start])
+}
+
+func GetOutputChannelName(data string) string {
+	//go fmt removes spaces between string and )
+	start, _ := substringfinder.FindFirstOfSubString(data, "chan string)", true)
 	return substringfinder.GetLastWord(data[:start])
 }
 
@@ -199,13 +207,30 @@ func AddPackage(fileContent, packageName string) string {
 //******************************************
 // DEBUG OUTPUT REPLACE BLOCK
 //******************************************
-func ReplaceOutputCalls(data string) string {
+func ReplaceOutputCalls(data, outputChannelName string) string {
 	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
 	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
 	data = strings.Replace(data, "cgreader.Trace", "log.Print", -1)
 	data = strings.Replace(data, "cgreader.Println", "println", -1)
 	data = strings.Replace(data, "cgreader.Printf", "fmt.Printf", -1)
 	data = strings.Replace(data, "cgreader.Print", "fmt.Print", -1)
+
+	outputChannelName += " <- "
+	data = strings.Replace(data, outputChannelName+"fmt.Sprintf(", "fmt.Printf(", -1)
+
+	start, end := 0, 0
+	for ; start != -1 && end != -1; start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, outputChannelName, end, true) {
+		endLine := strings.Index(data[end:], "\n")
+		endLine += end
+		subStart, subEnd := substringfinder.FindIndicesBetweenRunes(data[end:endLine], '"', '"')
+		if subStart != -1 && subEnd != -1 {
+			startUnimplBrackets, endUnimplBrackets := substringfinder.FindIndicesBetweenRunes(data[end:endLine], '(', ')')
+			if startUnimplBrackets != -1 && endUnimplBrackets != -1 && startUnimplBrackets < subStart && endUnimplBrackets > subEnd {
+				fmt.Printf("Probably Unimplemented output function found at: %s\n", data[end:endLine])
+			}
+			data = data[:start] + "fmt.Printf(" + data[end+subStart:end+subEnd+1] + ")" + data[end+subEnd+1:]
+		}
+	}
 	return data
 }
 
@@ -238,7 +263,6 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 					data = data[:newLineIndex] + newScannerString + "scanner.Scan()\n" + variableName + "scanner.Text()" + data[end+1:]
 				}
 			}
-		} else {
 		}
 		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
 	}
