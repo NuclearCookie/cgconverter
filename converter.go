@@ -76,7 +76,7 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData = ImportMissingPackages(fileData)
 	fileData = ReplaceOutputCalls(fileData)
 	fileData = ReplaceInputCalls(fileData, inputChannelName)
-	//println(fileData)
+	println(fileData)
 	return *buffer
 }
 
@@ -167,37 +167,38 @@ func GetCGReaderMainFunction(data string) (int, int) {
 	return start, end
 }
 
+func ImportMissingPackages(data string) string {
+	//add log to the imports block if it's not there already
+	data = AddPackage(data, "log")
+	data = AddPackage(data, "fmt")
+	data = AddPackage(data, "bufio")
+	data = AddPackage(data, "io")
+	return data
+}
+
+func AddPackage(fileContent, packageName string) string {
+	start, end := GetImportBlock(fileContent)
+	importsBlock := fileContent[start : end+1]
+
+	packageName = "\"" + packageName + "\""
+	start, end = substringfinder.FindFirstOfSubString(importsBlock, packageName)
+	//block not found: add it here
+	if start == -1 && end == -1 {
+		//copy a string..
+		originalImportsBlock := importsBlock
+		originalImportsBlock += " "
+		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
+
+		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
+		importsBlock = importsBlock[:end] + packageName + "\n" + importsBlock[end:]
+		fileContent = strings.Replace(fileContent, originalImportsBlock, importsBlock, 1)
+	}
+	return fileContent
+}
+
 //******************************************
 // DEBUG OUTPUT REPLACE BLOCK
 //******************************************
-func ImportMissingPackages(data string) string {
-	//add log to the imports block if it's not there already
-	start, end := GetImportBlock(data)
-	importsBlock := data[start : end+1]
-	//LOG PACKAGE
-	start, end = substringfinder.FindFirstOfSubString(importsBlock, "\"log\"")
-	//log block not found
-	if start == -1 && end == -1 {
-		originalImportsBlock := importsBlock
-		originalImportsBlock += " "
-		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
-		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
-		importsBlock = importsBlock[:end] + "\"log\"\n" + importsBlock[end:]
-		data = strings.Replace(data, originalImportsBlock, importsBlock, 1)
-	}
-	//FMT PACKAGE
-	start, end = substringfinder.FindFirstOfSubString(importsBlock, "\"fmt\"")
-	//fmt block not found
-	if start == -1 && end == -1 {
-		originalImportsBlock := importsBlock
-		originalImportsBlock += " "
-		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
-		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
-		importsBlock = importsBlock[:end] + "\"fmt\"\n" + importsBlock[end:]
-		data = strings.Replace(data, originalImportsBlock, importsBlock, 1)
-	}
-	return data
-}
 func ReplaceOutputCalls(data string) string {
 	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
 	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
@@ -216,9 +217,8 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 	start, end := substringfinder.FindFirstOfSubString(data, inputChannelName)
 	for start != -1 && end != -1 {
 		if substringfinder.IsWholeWord(data, start, end) {
-
+			//<-inputchannelname == read a whole line from input
 		} else {
-
 		}
 		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1)
 	}
