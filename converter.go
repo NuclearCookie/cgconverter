@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	//"os/exec"
 )
 
 func main() {
@@ -22,9 +23,11 @@ func main() {
 		log.Fatal(err)
 	}
 	outputBuffer := ConvertOfflineToOnline(&buffer)
+	println(outputBuffer)
 	//permission 0644 
-	ioutil.WriteFile(output, outputBuffer, 0644)
-	println("Output file generated! Copied online code to clipboard!")
+	ioutil.WriteFile(output, []byte(outputBuffer), 0644)
+	BuildAndFormat(output)
+	println("Output file generated at ", output, "! Copied online code to clipboard!")
 }
 
 func ProcessArgs(input, output *string) {
@@ -58,18 +61,21 @@ func ValidatePaths(input, output *string) (string, string) {
 	}
 
 	if *output == "" {
-		newOutput = filepath.Join(filepath.Dir(newInput), "OnlineCGCode.txt")
-		fmt.Printf("Generating output file at %s\n", newOutput)
+		newOutput = filepath.Join(filepath.Dir(newInput), "OnlineCGCode.go")
 	} else {
-		newOutput, err = filepath.EvalSymlinks(*output)
+		newOutput = *output
+		/*newOutput, err = filepath.EvalSymlinks(*output)
 		if err != nil {
 			log.Fatal(err)
+		}*/
+		if filepath.Ext(*output) != ".go" {
+			println("Please make the output file a .go file to allow us to format and test it!")
 		}
 	}
 	return newInput, newOutput
 }
 
-func ConvertOfflineToOnline(buffer *[]byte) []byte {
+func ConvertOfflineToOnline(buffer *[]byte) string {
 	fileData := string(*buffer)
 	inputChannelName := GetInputChannelName(fileData)
 	outputChannelName := GetOutputChannelName(fileData)
@@ -79,7 +85,7 @@ func ConvertOfflineToOnline(buffer *[]byte) []byte {
 	fileData = ReplaceOutputCalls(fileData, outputChannelName)
 	fileData = ReplaceInputCalls(fileData, inputChannelName)
 	//println(fileData)
-	return *buffer
+	return fileData
 }
 
 //******************************************
@@ -267,4 +273,18 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
 	}
 	return data
+}
+
+//******************************************
+// COMMAND BLOCK
+//******************************************
+func BuildAndFormat(file string) {
+	/*if filepath.Ext(file) == ".go" {
+		cmd := exec.Command("go fmt")
+		cmd.Stdin = strings.NewReader(file)
+		err := cmd.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}*/
 }
