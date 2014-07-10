@@ -1,15 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"github.com/nuclearcookie/substringfinder"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-	//"os/exec"
 )
 
 func main() {
@@ -23,8 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 	outputBuffer := ConvertOfflineToOnline(&buffer)
-	println(outputBuffer)
-	//permission 0644 
+	//permission 0644
 	ioutil.WriteFile(output, []byte(outputBuffer), 0644)
 	BuildAndFormat(output)
 	println("Output file generated at ", output, "! Copied online code to clipboard!")
@@ -110,7 +110,7 @@ func RemoveImport(data string) string {
 	//end + 1 to include the last found rune
 	//note: reslicing does not copy over the data!
 	imports := data[start : end+1]
-	//make a copy by adding 1 char and taking a slice of all -1	
+	//make a copy by adding 1 char and taking a slice of all -1
 	originalImportsBlock := imports
 	originalImportsBlock += " "
 	originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
@@ -279,12 +279,20 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 // COMMAND BLOCK
 //******************************************
 func BuildAndFormat(file string) {
-	/*if filepath.Ext(file) == ".go" {
-		cmd := exec.Command("go fmt")
-		cmd.Stdin = strings.NewReader(file)
+	if filepath.Ext(file) == ".go" {
+		cmd := exec.Command("go", "fmt", file)
+		//cmd.Stdin = strings.NewReader(file)
 		err := cmd.Run()
 		if err != nil {
 			log.Fatal(err)
 		}
-	}*/
+		cmd = exec.Command("go", "build", file)
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err = cmd.Run()
+		println(out.String())
+		if err != nil {
+			println("Error building the output file.. Sorry, there must still be a little error in the converter!")
+		}
+	}
 }
