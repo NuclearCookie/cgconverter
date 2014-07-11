@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/atotto/clipboard"
 	"github.com/nuclearcookie/substringfinder"
 	"io/ioutil"
 	"log"
@@ -14,20 +15,19 @@ import (
 )
 
 func main() {
-	var input string
-	var output string
-	ProcessArgs(&input, &output)
-	input, output = ValidatePaths(&input, &output)
+	var inputFilePath string
+	var outputFilePath string
+	ProcessArgs(&inputFilePath, &outputFilePath)
+	inputFilePath, outputFilePath = ValidatePaths(&inputFilePath, &outputFilePath)
 
-	buffer, err := ioutil.ReadFile(input)
+	buffer, err := ioutil.ReadFile(inputFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	outputBuffer := ConvertOfflineToOnline(&buffer)
+	outputText := ConvertOfflineToOnline(&buffer)
 	//permission 0644
-	ioutil.WriteFile(output, []byte(outputBuffer), 0644)
-	BuildAndFormat(output)
-	println("Output file generated at ", output, "! Copied online code to clipboard!")
+	Output(outputFilePath, outputText)
+
 }
 
 func ProcessArgs(input, output *string) {
@@ -40,16 +40,31 @@ func ProcessArgs(input, output *string) {
 	}
 }
 
+func Output(path, text string) {
+	//First write to file, then call fmt on the file, then copy the filecontent!
+	ioutil.WriteFile(path, []byte(text), 0644)
+	BuildAndFormat(path)
+	buffer, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = clipboard.WriteAll(string(buffer))
+	if err != nil {
+		log.Fatal(err)
+	}
+	println("Output file generated at ", path, "! Copied online code to clipboard!")
+}
+
 func ValidatePaths(input, output *string) (string, string) {
 	//convert symbolic links to the real path
 	var newInput string
 	var newOutput string
 	var err error
-
 	newInput, err = filepath.EvalSymlinks(*input)
 	if err != nil {
 		log.Fatal(err)
 	}
+	newInput = *input
 	//check if the file exists
 	file, err := os.Open(newInput)
 	if err != nil {
@@ -117,7 +132,8 @@ func RemoveImport(data string) string {
 	//remove the cgreader import
 	start, end = substringfinder.FindIndicesBetweenRunesContaining(imports, '"', '"', "cgreader")
 	if start != -1 && end != -1 {
-		imports = imports[0:start] + imports[end+1:]
+		start = strings.LastIndex(imports[:start], "\n")
+		imports = imports[:start] + imports[end+1:]
 	}
 	data = strings.Replace(data, originalImportsBlock, imports, 1)
 	return data
@@ -281,7 +297,7 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 func BuildAndFormat(file string) {
 	if filepath.Ext(file) == ".go" {
 		cmd := exec.Command("go", "fmt", file)
-		//cmd.Stdin = strings.NewReader(file)
+		cmd.Stdin = strings.NewReader(file)
 		err := cmd.Run()
 		if err != nil {
 			log.Fatal(err)
