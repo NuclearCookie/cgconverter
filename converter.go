@@ -19,12 +19,8 @@ func main() {
 	var outputFilePath string
 	ProcessArgs(&inputFilePath, &outputFilePath)
 	inputFilePath, outputFilePath = ValidatePaths(&inputFilePath, &outputFilePath)
-
-	buffer, err := ioutil.ReadFile(inputFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	outputText := ConvertOfflineToOnline(&buffer)
+	text := Input(inputFilePath)
+	outputText := ConvertOfflineToOnline(text)
 	//permission 0644
 	Output(outputFilePath, outputText)
 
@@ -40,10 +36,20 @@ func ProcessArgs(input, output *string) {
 	}
 }
 
+func Input(inputFile string) string {
+	Format(inputFile)
+	buffer, err := ioutil.ReadFile(inputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(buffer)
+}
+
 func Output(path, text string) {
 	//First write to file, then call fmt on the file, then copy the filecontent!
 	ioutil.WriteFile(path, []byte(text), 0644)
-	BuildAndFormat(path)
+	Format(path)
+	Build(path)
 	buffer, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
@@ -51,6 +57,7 @@ func Output(path, text string) {
 	err = clipboard.WriteAll(string(buffer))
 	if err != nil {
 		log.Fatal(err)
+
 	}
 	println("Output file generated at ", path, "! Copied online code to clipboard!")
 }
@@ -90,17 +97,16 @@ func ValidatePaths(input, output *string) (string, string) {
 	return newInput, newOutput
 }
 
-func ConvertOfflineToOnline(buffer *[]byte) string {
-	fileData := string(*buffer)
-	inputChannelName := GetInputChannelName(fileData)
-	outputChannelName := GetOutputChannelName(fileData)
-	fileData = RemoveImport(fileData)
-	fileData = RemoveCGReaderMainFunction(fileData)
-	fileData = ImportMissingPackages(fileData)
-	fileData = ReplaceOutputCalls(fileData, outputChannelName)
-	fileData = ReplaceInputCalls(fileData, inputChannelName)
-	//println(fileData)
-	return fileData
+func ConvertOfflineToOnline(text string) string {
+	inputChannelName := GetInputChannelName(text)
+	outputChannelName := GetOutputChannelName(text)
+	text = RemoveImport(text)
+	text = RemoveCGReaderMainFunction(text)
+	text = ImportMissingPackages(text)
+	text = ReplaceOutputCalls(text, outputChannelName)
+	text = ReplaceInputCalls(text, inputChannelName)
+	//println(text)
+	return text
 }
 
 //******************************************
@@ -294,21 +300,30 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 //******************************************
 // COMMAND BLOCK
 //******************************************
-func BuildAndFormat(file string) {
+func Build(file string) {
 	if filepath.Ext(file) == ".go" {
-		cmd := exec.Command("go", "fmt", file)
+		cmd := exec.Command("go", "build", file)
 		cmd.Stdin = strings.NewReader(file)
-		err := cmd.Run()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cmd = exec.Command("go", "build", file)
 		var out bytes.Buffer
 		cmd.Stdout = &out
-		err = cmd.Run()
+		err := cmd.Run()
 		println(out.String())
 		if err != nil {
 			println("Error building the output file.. Sorry, there must still be a little error in the converter!")
+		}
+	}
+}
+
+func Format(file string) {
+	if filepath.Ext(file) == ".go" {
+		cmd := exec.Command("go", "fmt", file)
+		cmd.Stdin = strings.NewReader(file)
+		// var out bytes.Buffer
+		// cmd.Stdout = &out
+		err := cmd.Run()
+		// println(out.String())
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }
