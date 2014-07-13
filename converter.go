@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/atotto/clipboard"
-	"github.com/nuclearcookie/substringfinder"
+	"github.com/nuclearcookie/stringparsehelper"
 	"io/ioutil"
 	"log"
 	"os"
@@ -113,14 +113,14 @@ func ConvertOfflineToOnline(text string) string {
 // GETTERS
 //******************************************
 func GetInputChannelName(data string) string {
-	start, _ := substringfinder.FindFirstOfSubString(data, "<-chan string", true)
-	return substringfinder.GetLastWord(data[:start])
+	start, _ := stringparsehelper.FindFirstOfSubString(data, "<-chan string", true)
+	return stringparsehelper.GetLastWord(data[:start])
 }
 
 func GetOutputChannelName(data string) string {
 	//go fmt removes spaces between string and )
-	start, _ := substringfinder.FindFirstOfSubString(data, "chan string)", true)
-	return substringfinder.GetLastWord(data[:start])
+	start, _ := stringparsehelper.FindFirstOfSubString(data, "chan string)", true)
+	return stringparsehelper.GetLastWord(data[:start])
 }
 
 //******************************************
@@ -136,7 +136,7 @@ func RemoveImport(data string) string {
 	originalImportsBlock += " "
 	originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
 	//remove the cgreader import
-	start, end = substringfinder.FindIndicesBetweenRunesContaining(imports, '"', '"', "cgreader")
+	start, end = stringparsehelper.FindIndicesBetweenRunesContaining(imports, '"', '"', "cgreader")
 	if start != -1 && end != -1 {
 		start = strings.LastIndex(imports[:start], "\n")
 		imports = imports[:start] + imports[end+1:]
@@ -147,13 +147,13 @@ func RemoveImport(data string) string {
 }
 
 func GetImportBlock(data string) (int, int) {
-	start, end := substringfinder.FindFirstOfSubString(data, "import", true)
+	start, end := stringparsehelper.FindFirstOfSubString(data, "import", true)
 	if start != -1 && end != -1 {
 		if strings.IndexRune(data[start:], '(') < strings.IndexRune(data[start:], '"') {
 			//import structure surrounded by brackets
-			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(data, '(', ')', end)
+			_, end = stringparsehelper.FindIndicesBetweenRunesWithStartingIndex(data, '(', ')', end)
 		} else {
-			_, end = substringfinder.FindIndicesBetweenRunesWithStartingIndex(data, '"', '"', end)
+			_, end = stringparsehelper.FindIndicesBetweenRunesWithStartingIndex(data, '"', '"', end)
 		}
 	}
 	if start == -1 || end == -1 {
@@ -173,7 +173,7 @@ func RemoveCGReaderMainFunction(data string) string {
 		originalMainString := mainString
 		originalMainString += " "
 		originalMainString = originalMainString[:len(originalMainString)-1]
-		start, end = substringfinder.FindIndicesBetweenMatchingRunes(mainString, '{', '}', true)
+		start, end = stringparsehelper.FindIndicesBetweenMatchingRunes(mainString, '{', '}', true)
 		if start != -1 && end != -1 {
 			mainString = mainString[start+1 : end]
 			data = strings.Replace(data, originalMainString, mainString, 1)
@@ -184,22 +184,22 @@ func RemoveCGReaderMainFunction(data string) string {
 
 func GetCGReaderMainFunction(data string) (int, int) {
 	start, end := -1, -1
-	start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualPrograms", true)
+	start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunManualPrograms", true)
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunManualProgram", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunManualProgram", true)
 	}
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms", true)
 	}
 	if start == -1 {
-		start, end = substringfinder.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram", true)
 	}
 	if start == -1 {
 		println("Unknown cgreader main function.. cannot remove it!")
 		os.Exit(0)
 	}
 	//Isolate the function
-	_, end = substringfinder.FindIndicesBetweenMatchingRunesWithStartingIndex(data, '(', ')', end+1, true)
+	_, end = stringparsehelper.FindIndicesBetweenMatchingRunesWithStartingIndex(data, '(', ')', end+1, true)
 	return start, end
 }
 
@@ -217,7 +217,7 @@ func AddPackage(fileContent, packageName string) string {
 	importsBlock := fileContent[start : end+1]
 
 	packageName = "\"" + packageName + "\""
-	start, end = substringfinder.FindFirstOfSubString(importsBlock, packageName, false)
+	start, end = stringparsehelper.FindFirstOfSubString(importsBlock, packageName, false)
 	//block not found: add it here
 	if start == -1 && end == -1 {
 		//copy a string..
@@ -225,7 +225,7 @@ func AddPackage(fileContent, packageName string) string {
 		originalImportsBlock += " "
 		originalImportsBlock = originalImportsBlock[:len(originalImportsBlock)-1]
 
-		start, end = substringfinder.FindIndicesBetweenRunes(importsBlock, '(', ')')
+		start, end = stringparsehelper.FindIndicesBetweenRunes(importsBlock, '(', ')')
 		importsBlock = importsBlock[:end] + packageName + "\n" + importsBlock[end:]
 		fileContent = strings.Replace(fileContent, originalImportsBlock, importsBlock, 1)
 	}
@@ -247,12 +247,12 @@ func ReplaceOutputCalls(data, outputChannelName string) string {
 	data = strings.Replace(data, outputChannelName+"fmt.Sprintf(", "fmt.Printf(", -1)
 
 	start, end := 0, 0
-	for ; start != -1 && end != -1; start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, outputChannelName, end, true) {
+	for ; start != -1 && end != -1; start, end = stringparsehelper.FindFirstOfSubStringWithStartingIndex(data, outputChannelName, end, true) {
 		endLine := strings.Index(data[end:], "\n")
 		endLine += end
-		subStart, subEnd := substringfinder.FindIndicesBetweenRunes(data[end:endLine], '"', '"')
+		subStart, subEnd := stringparsehelper.FindIndicesBetweenRunes(data[end:endLine], '"', '"')
 		if subStart != -1 && subEnd != -1 {
-			startUnimplBrackets, endUnimplBrackets := substringfinder.FindIndicesBetweenRunes(data[end:endLine], '(', ')')
+			startUnimplBrackets, endUnimplBrackets := stringparsehelper.FindIndicesBetweenRunes(data[end:endLine], '(', ')')
 			if startUnimplBrackets != -1 && endUnimplBrackets != -1 && startUnimplBrackets < subStart && endUnimplBrackets > subEnd {
 				fmt.Printf("Probably Unimplemented output function found at: %s\n", data[end:endLine])
 			}
@@ -267,9 +267,9 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 	originalString += inputChannelName
 	originalString += ","
 	data = strings.Replace(data, originalString, "fmt.Scanln(", -1)
-	start, end := substringfinder.FindFirstOfSubString(data, inputChannelName, true)
+	start, end := stringparsehelper.FindFirstOfSubString(data, inputChannelName, true)
 	for start != -1 && end != -1 {
-		if substringfinder.IsWholeWord(data, start, end) {
+		if stringparsehelper.IsWholeWord(data, start, end) {
 			//<-inputchannelname == read a whole line from input
 			if start > 2 {
 				//go fmt makes sure there are no spaces between <- and input
@@ -278,9 +278,9 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 					newLineIndex := strings.LastIndex(data[:start-2], "\n") + 1
 					variableName := data[newLineIndex : start-2]
 					//check if we need to add a scanner in this scope
-					left, right := substringfinder.FindIndicesOfSurroundingRunesOfSubString(data, newLineIndex, end+1, '{', '}')
+					left, right := stringparsehelper.FindIndicesOfSurroundingRunesOfSubString(data, newLineIndex, end+1, '{', '}')
 					newScannerString := "scanner := bufio.NewScanner(os.Stdin)"
-					left, right = substringfinder.FindFirstOfSubString(data[left+1:right], newScannerString, true)
+					left, right = stringparsehelper.FindFirstOfSubString(data[left+1:right], newScannerString, true)
 					if left == -1 && right == -1 {
 						newScannerString += "\n"
 					} else {
@@ -292,7 +292,7 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 				}
 			}
 		}
-		start, end = substringfinder.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
+		start, end = stringparsehelper.FindFirstOfSubStringWithStartingIndex(data, inputChannelName, end+1, true)
 	}
 	return data
 }
