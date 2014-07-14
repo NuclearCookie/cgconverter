@@ -184,20 +184,25 @@ func RemoveCGReaderMainFunction(data string) string {
 
 func GetCGReaderMainFunction(data string) (int, int) {
 	start, end := -1, -1
-	start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunManualPrograms", true)
+	start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunStaticPrograms", true)
 	if start == -1 {
-		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunManualProgram", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunStaticProgram", true)
 	}
 	if start == -1 {
-		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunAndValidateManualPrograms", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunInteractivePrograms", true)
+		println("Interactive challenges not yet supported!")
+		os.Exit(0)
 	}
 	if start == -1 {
-		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunAndValidateManualProgram", true)
+		start, end = stringparsehelper.FindFirstOfSubString(data, "cgreader.RunInteractiveProgram", true)
+		println("Interactive challenges not yet supported!")
+		os.Exit(0)
 	}
 	if start == -1 {
 		println("Unknown cgreader main function.. cannot remove it!")
 		os.Exit(0)
 	}
+
 	//Isolate the function
 	_, end = stringparsehelper.FindIndicesBetweenMatchingRunesWithStartingIndex(data, '(', ')', end+1, true)
 	return start, end
@@ -239,10 +244,6 @@ func ReplaceOutputCalls(data, outputChannelName string) string {
 	data = strings.Replace(data, "cgreader.Traceln", "log.Println", -1)
 	data = strings.Replace(data, "cgreader.Tracef", "log.Printf", -1)
 	data = strings.Replace(data, "cgreader.Trace", "log.Print", -1)
-	data = strings.Replace(data, "cgreader.Println", "println", -1)
-	data = strings.Replace(data, "cgreader.Printf", "fmt.Printf", -1)
-	data = strings.Replace(data, "cgreader.Print", "fmt.Print", -1)
-
 	outputChannelName += " <- "
 	data = strings.Replace(data, outputChannelName+"fmt.Sprintf(", "fmt.Printf(", -1)
 
