@@ -258,6 +258,8 @@ func ReplaceOutputCalls(data, outputChannelName string) string {
 				fmt.Printf("Probably Unimplemented output function found at: %s\n", data[end:endLine])
 			}
 			data = data[:start] + "fmt.Printf(" + data[end+subStart:end+subEnd+1] + ")" + data[end+subEnd+1:]
+		} else if start > 0 && end > 0 /*might be just a string that is being assigned to output? */ {
+			data = data[:start] + "fmt.Print(" + data[end:endLine] + ")" + data[endLine:]
 		}
 	}
 	return data
@@ -268,6 +270,7 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 	originalString += inputChannelName
 	originalString += ","
 	data = strings.Replace(data, originalString, "fmt.Scanln(", -1)
+	scannerMade := false
 	start, end := stringparsehelper.FindFirstOfSubString(data, inputChannelName, true)
 	for start != -1 && end != -1 {
 		if stringparsehelper.IsWholeWord(data, start, end) {
@@ -278,14 +281,19 @@ func ReplaceInputCalls(data string, inputChannelName string) string {
 					//take everything left of this operation and save it...
 					newLineIndex := strings.LastIndex(data[:start-2], "\n") + 1
 					variableName := data[newLineIndex : start-2]
-					//check if we need to add a scanner in this scope
+					//check if we have already made a scanner... we have to assume the user handles all input in the same function..
 					left, right := stringparsehelper.FindIndicesOfSurroundingRunesOfSubString(data, newLineIndex, end+1, '{', '}')
-					newScannerString := "scanner := bufio.NewScanner(os.Stdin)"
-					left, right = stringparsehelper.FindFirstOfSubString(data[left+1:right], newScannerString, true)
-					if left == -1 && right == -1 {
-						newScannerString += "\n"
+					var newScannerString string
+					if !scannerMade {
+						newScannerString = "scanner := bufio.NewScanner(os.Stdin)"
+						left, right = stringparsehelper.FindFirstOfSubString(data[left+1:right], newScannerString, true)
+						if left == -1 && right == -1 {
+							newScannerString += "\n"
+							scannerMade = true
+						} else {
+							newScannerString = ""
+						}
 					} else {
-						fmt.Printf("Left and right are: %d and %d", left, right)
 						newScannerString = ""
 					}
 					//remove the old line
